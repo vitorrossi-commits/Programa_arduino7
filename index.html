@@ -1,0 +1,2120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Central de Iluminação IoT</title>
+
+    <!-- Paho MQTT -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+
+            min-height: 100vh;
+
+            font-family:
+                "Segoe UI",
+                Arial,
+                sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #dbeafe,
+                    #eff6ff,
+                    #e0f2fe
+                );
+
+            color: #1e293b;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            padding: 20px;
+        }
+
+
+        /* =================================
+           CONTAINER PRINCIPAL
+        ================================= */
+
+        .dashboard {
+
+            width: 100%;
+
+            max-width: 1050px;
+
+            background:
+                rgba(255, 255, 255, 0.88);
+
+            backdrop-filter: blur(15px);
+
+            -webkit-backdrop-filter: blur(15px);
+
+            border:
+                1px solid
+                rgba(255, 255, 255, 0.8);
+
+            border-radius: 24px;
+
+            box-shadow:
+                0 25px 60px
+                rgba(30, 64, 175, 0.18);
+
+            overflow: hidden;
+        }
+
+
+        /* =================================
+           CABEÇALHO
+        ================================= */
+
+        .header {
+
+            padding: 28px 32px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 20px;
+
+            border-bottom:
+                1px solid #e2e8f0;
+        }
+
+
+        .header-content h1 {
+
+            color: #172554;
+
+            font-size: 26px;
+
+            font-weight: 750;
+
+            letter-spacing: -0.5px;
+        }
+
+
+        .header-content p {
+
+            margin-top: 6px;
+
+            color: #64748b;
+
+            font-size: 14px;
+        }
+
+
+        /* =================================
+           STATUS
+        ================================= */
+
+        .status {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 9px;
+
+            padding: 10px 15px;
+
+            border-radius: 30px;
+
+            background: #fef3c7;
+
+            color: #92400e;
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            white-space: nowrap;
+        }
+
+
+        .status-dot {
+
+            width: 9px;
+
+            height: 9px;
+
+            border-radius: 50%;
+
+            background: #facc15;
+
+            animation: pulse 1.5s infinite;
+        }
+
+
+        .status-online {
+
+            background: #dcfce7;
+
+            color: #166534;
+        }
+
+
+        .status-online .status-dot {
+
+            background: #22c55e;
+
+            animation: none;
+
+            box-shadow:
+                0 0 10px
+                rgba(34, 197, 94, 0.7);
+        }
+
+
+        .status-offline {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+        }
+
+
+        .status-offline .status-dot {
+
+            background: #ef4444;
+
+            animation: none;
+        }
+
+
+        @keyframes pulse {
+
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(1.3);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+
+        /* =================================
+           CONTEÚDO
+        ================================= */
+
+        .content {
+
+            padding: 30px;
+        }
+
+
+        /* =================================
+           TÓPICO MQTT
+        ================================= */
+
+        .topic-section {
+
+            margin-bottom: 28px;
+        }
+
+
+        .topic-label {
+
+            display: block;
+
+            margin-bottom: 9px;
+
+            color: #334155;
+
+            font-size: 13px;
+
+            font-weight: 700;
+        }
+
+
+        .topic-input {
+
+            width: 100%;
+
+            height: 50px;
+
+            padding: 0 15px;
+
+            border:
+                1px solid #cbd5e1;
+
+            border-radius: 12px;
+
+            background:
+                rgba(248, 250, 252, 0.9);
+
+            color: #334155;
+
+            font-family: monospace;
+
+            font-size: 14px;
+
+            outline: none;
+
+            transition: 0.2s;
+        }
+
+
+        .topic-input:focus {
+
+            border-color: #3b82f6;
+
+            box-shadow:
+                0 0 0 4px
+                rgba(59, 130, 246, 0.10);
+        }
+
+
+        .topic-input::placeholder {
+
+            color: #94a3b8;
+        }
+
+
+        /* =================================
+           GRID DOS LEDs
+        ================================= */
+
+        .led-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap: 18px;
+        }
+
+
+        /* =================================
+           CARD LED
+        ================================= */
+
+        .led-card {
+
+            background:
+                rgba(248, 250, 252, 0.82);
+
+            border:
+                1px solid #e2e8f0;
+
+            border-radius: 18px;
+
+            padding: 24px;
+
+            text-align: center;
+
+            transition: 0.25s;
+        }
+
+
+        .led-card:hover {
+
+            transform: translateY(-3px);
+
+            box-shadow:
+                0 12px 25px
+                rgba(15, 23, 42, 0.08);
+        }
+
+
+        .led-title {
+
+            color: #172554;
+
+            font-size: 18px;
+
+            font-weight: 750;
+        }
+
+
+        .led-port {
+
+            margin-top: 5px;
+
+            color: #94a3b8;
+
+            font-size: 12px;
+        }
+
+
+        /* =================================
+           LED VIRTUAL
+        ================================= */
+
+        .led-area {
+
+            height: 180px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+        }
+
+
+        .led {
+
+            width: 125px;
+
+            height: 125px;
+
+            border-radius: 50%;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            padding: 15px;
+
+            background:
+                #cbd5e1;
+
+            border:
+                8px solid #e2e8f0;
+
+            box-shadow:
+                inset 0 5px 12px
+                rgba(0, 0, 0, 0.12);
+
+            transition:
+                all 0.4s ease;
+        }
+
+
+        .led-text {
+
+            color: #64748b;
+
+            font-size: 11px;
+
+            font-weight: 750;
+
+            text-transform: uppercase;
+
+            text-align: center;
+        }
+
+
+        /* LED LIGADO */
+
+        .led.active {
+
+            background:
+                #38bdf8;
+
+            border-color:
+                #bae6fd;
+
+            box-shadow:
+
+                0 0 0 8px
+                rgba(56, 189, 248, 0.12),
+
+                0 0 25px
+                rgba(14, 165, 233, 0.65),
+
+                0 0 55px
+                rgba(37, 99, 235, 0.45);
+
+            animation:
+                ledPulse 1.5s infinite;
+        }
+
+
+        .led.active .led-text {
+
+            color: white;
+        }
+
+
+        @keyframes ledPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+
+        /* =================================
+           BOTÕES INDIVIDUAIS
+        ================================= */
+
+        .buttons {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 9px;
+        }
+
+
+        button {
+
+            border: none;
+
+            border-radius: 10px;
+
+            min-height: 46px;
+
+            padding: 12px;
+
+            color: white;
+
+            font-size: 13px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition:
+                all 0.2s ease;
+        }
+
+
+        button:not(:disabled):active {
+
+            transform:
+                scale(0.95);
+        }
+
+
+        button:disabled {
+
+            opacity: 0.4;
+
+            cursor: not-allowed;
+        }
+
+
+        .btn-on {
+
+            background:
+                #16a34a;
+        }
+
+
+        .btn-on:hover:not(:disabled) {
+
+            background:
+                #15803d;
+        }
+
+
+        .btn-off {
+
+            background:
+                #ef4444;
+        }
+
+
+        .btn-off:hover:not(:disabled) {
+
+            background:
+                #dc2626;
+        }
+
+
+        /* =================================
+           CONTROLE GERAL
+        ================================= */
+
+        .general-control {
+
+            margin-top: 22px;
+
+            padding: 24px;
+
+            background:
+                rgba(255, 255, 255, 0.75);
+
+            border:
+                1px solid #e2e8f0;
+
+            border-radius: 18px;
+        }
+
+
+        .general-control h2 {
+
+            color: #172554;
+
+            font-size: 19px;
+        }
+
+
+        .general-control p {
+
+            margin-top: 5px;
+
+            margin-bottom: 18px;
+
+            color: #64748b;
+
+            font-size: 13px;
+        }
+
+
+        .general-buttons {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 12px;
+        }
+
+
+        .general-buttons button {
+
+            min-height: 52px;
+
+            font-size: 14px;
+        }
+
+
+        /* =================================
+           MENSAGEM
+        ================================= */
+
+        .message {
+
+            margin-top: 15px;
+
+            padding: 12px;
+
+            border-radius: 10px;
+
+            background: #eff6ff;
+
+            border:
+                1px solid #dbeafe;
+
+            color: #1d4ed8;
+
+            font-size: 12px;
+
+            font-weight: 600;
+
+            text-align: center;
+        }
+
+
+        /* =================================
+           INFORMAÇÕES
+        ================================= */
+
+        .information {
+
+            margin-top: 20px;
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap: 10px;
+        }
+
+
+        .info {
+
+            padding: 14px;
+
+            border-radius: 11px;
+
+            background:
+                #f8fafc;
+
+            border:
+                1px solid #e2e8f0;
+        }
+
+
+        .info-title {
+
+            color: #94a3b8;
+
+            font-size: 10px;
+
+            font-weight: 700;
+
+            text-transform: uppercase;
+        }
+
+
+        .info-value {
+
+            margin-top: 5px;
+
+            color: #334155;
+
+            font-size: 12px;
+
+            font-weight: 650;
+        }
+
+
+        /* =================================
+           RODAPÉ
+        ================================= */
+
+        .footer {
+
+            margin-top: 20px;
+
+            text-align: center;
+
+            color: #94a3b8;
+
+            font-size: 10px;
+        }
+
+
+        /* =================================
+           TABLET
+        ================================= */
+
+        @media (max-width: 800px) {
+
+            .led-grid {
+
+                grid-template-columns:
+                    1fr 1fr;
+            }
+
+            .led-card:last-child {
+
+                grid-column:
+                    1 / -1;
+            }
+
+        }
+
+
+        /* =================================
+           CELULAR
+        ================================= */
+
+        @media (max-width: 600px) {
+
+            body {
+
+                padding: 10px;
+
+                align-items:
+                    flex-start;
+            }
+
+
+            .dashboard {
+
+                border-radius: 18px;
+            }
+
+
+            .header {
+
+                padding: 22px 18px;
+
+                flex-direction:
+                    column;
+
+                text-align: center;
+            }
+
+
+            .header-content h1 {
+
+                font-size: 21px;
+            }
+
+
+            .status {
+
+                width: 100%;
+
+                justify-content:
+                    center;
+            }
+
+
+            .content {
+
+                padding: 18px;
+            }
+
+
+            .led-grid {
+
+                grid-template-columns: 1fr;
+            }
+
+
+            .led-card:last-child {
+
+                grid-column: auto;
+            }
+
+
+            .general-buttons {
+
+                grid-template-columns: 1fr;
+            }
+
+
+            .information {
+
+                grid-template-columns: 1fr;
+            }
+
+
+            .led {
+
+                width: 110px;
+
+                height: 110px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <main class="dashboard">
+
+
+        <!-- =================================
+             CABEÇALHO
+        ================================= -->
+
+        <header class="header">
+
+            <div class="header-content">
+
+                <h1>
+                    Central de Iluminação IoT
+                </h1>
+
+                <p>
+                    Controle de 3 LEDs • Arduino
+                </p>
+
+            </div>
+
+
+            <div
+                id="status"
+                class="status"
+            >
+
+                <span class="status-dot"></span>
+
+                <span id="statusText">
+                    Sincronizando...
+                </span>
+
+            </div>
+
+        </header>
+
+
+        <section class="content">
+
+
+            <!-- =================================
+                 TÓPICO MQTT
+            ================================= -->
+
+            <div class="topic-section">
+
+                <label
+                    class="topic-label"
+                    for="topicInput"
+                >
+                    Tópico MQTT
+                </label>
+
+
+                <input
+                    id="topicInput"
+                    class="topic-input"
+                    type="text"
+                    placeholder="Digite o tópico MQTT"
+                    autocomplete="off"
+                    spellcheck="false"
+                >
+
+            </div>
+
+
+            <!-- =================================
+                 LEDs
+            ================================= -->
+
+            <div class="led-grid">
+
+
+                <!-- LED 1 -->
+
+                <div class="led-card">
+
+                    <div class="led-title">
+                        LED 1
+                    </div>
+
+                    <div class="led-port">
+                        Arduino • Porta D11
+                    </div>
+
+
+                    <div class="led-area">
+
+                        <div
+                            id="led1"
+                            class="led"
+                        >
+
+                            <span
+                                id="ledText1"
+                                class="led-text"
+                            >
+                                Dispositivo Inativo
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="buttons">
+
+                        <button
+                            id="btnLed1On"
+                            class="btn-on"
+                            disabled
+                        >
+                            LIGAR
+                        </button>
+
+
+                        <button
+                            id="btnLed1Off"
+                            class="btn-off"
+                            disabled
+                        >
+                            DESLIGAR
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- LED 2 -->
+
+                <div class="led-card">
+
+                    <div class="led-title">
+                        LED 2
+                    </div>
+
+                    <div class="led-port">
+                        Arduino • Porta D12
+                    </div>
+
+
+                    <div class="led-area">
+
+                        <div
+                            id="led2"
+                            class="led"
+                        >
+
+                            <span
+                                id="ledText2"
+                                class="led-text"
+                            >
+                                Dispositivo Inativo
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="buttons">
+
+                        <button
+                            id="btnLed2On"
+                            class="btn-on"
+                            disabled
+                        >
+                            LIGAR
+                        </button>
+
+
+                        <button
+                            id="btnLed2Off"
+                            class="btn-off"
+                            disabled
+                        >
+                            DESLIGAR
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- LED 3 -->
+
+                <div class="led-card">
+
+                    <div class="led-title">
+                        LED 3
+                    </div>
+
+                    <div class="led-port">
+                        Arduino • Porta D13
+                    </div>
+
+
+                    <div class="led-area">
+
+                        <div
+                            id="led3"
+                            class="led"
+                        >
+
+                            <span
+                                id="ledText3"
+                                class="led-text"
+                            >
+                                Dispositivo Inativo
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="buttons">
+
+                        <button
+                            id="btnLed3On"
+                            class="btn-on"
+                            disabled
+                        >
+                            LIGAR
+                        </button>
+
+
+                        <button
+                            id="btnLed3Off"
+                            class="btn-off"
+                            disabled
+                        >
+                            DESLIGAR
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================
+                 CONTROLE GERAL
+            ================================= -->
+
+            <section class="general-control">
+
+                <h2>
+                    Controle Geral
+                </h2>
+
+                <p>
+                    Controle os três LEDs simultaneamente.
+                </p>
+
+
+                <div class="general-buttons">
+
+                    <button
+                        id="btnAllOn"
+                        class="btn-on"
+                        disabled
+                    >
+                        LIGAR TODOS OS LEDs
+                    </button>
+
+
+                    <button
+                        id="btnAllOff"
+                        class="btn-off"
+                        disabled
+                    >
+                        DESLIGAR TODOS OS LEDs
+                    </button>
+
+                </div>
+
+
+                <div class="message">
+
+                    Última mensagem recebida:
+
+                    <span id="lastMessage">
+                        Aguardando
+                    </span>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================
+                 INFORMAÇÕES
+            ================================= -->
+
+            <div class="information">
+
+
+                <div class="info">
+
+                    <div class="info-title">
+                        Broker
+                    </div>
+
+                    <div class="info-value">
+                        broker.hivemq.com
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <div class="info-title">
+                        Conexão
+                    </div>
+
+                    <div class="info-value">
+                        WebSocket SSL
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <div class="info-title">
+                        Portas
+                    </div>
+
+                    <div class="info-value">
+                        D11 • D12 • D13
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="footer">
+
+                MQTT • HiveMQ • Arduino • IoT
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script>
+
+
+        /* =================================
+           CONFIGURAÇÃO MQTT
+        ================================= */
+
+        const MQTT_HOST =
+            "broker.hivemq.com";
+
+
+        const MQTT_PORT =
+            8884;
+
+
+        let currentTopic = "";
+
+
+        /* =================================
+           CLIENT ID ALEATÓRIO
+        ================================= */
+
+        const clientId =
+
+            "iot_3leds_" +
+
+            Math.random()
+                .toString(16)
+                .substring(2, 10) +
+
+            "_" +
+
+            Date.now();
+
+
+        /* =================================
+           ELEMENTOS
+        ================================= */
+
+        const status =
+            document.getElementById(
+                "status"
+            );
+
+
+        const statusText =
+            document.getElementById(
+                "statusText"
+            );
+
+
+        const topicInput =
+            document.getElementById(
+                "topicInput"
+            );
+
+
+        /* LEDs */
+
+        const led1 =
+            document.getElementById(
+                "led1"
+            );
+
+
+        const led2 =
+            document.getElementById(
+                "led2"
+            );
+
+
+        const led3 =
+            document.getElementById(
+                "led3"
+            );
+
+
+        const ledText1 =
+            document.getElementById(
+                "ledText1"
+            );
+
+
+        const ledText2 =
+            document.getElementById(
+                "ledText2"
+            );
+
+
+        const ledText3 =
+            document.getElementById(
+                "ledText3"
+            );
+
+
+        /* Botões LED 1 */
+
+        const btnLed1On =
+            document.getElementById(
+                "btnLed1On"
+            );
+
+
+        const btnLed1Off =
+            document.getElementById(
+                "btnLed1Off"
+            );
+
+
+        /* Botões LED 2 */
+
+        const btnLed2On =
+            document.getElementById(
+                "btnLed2On"
+            );
+
+
+        const btnLed2Off =
+            document.getElementById(
+                "btnLed2Off"
+            );
+
+
+        /* Botões LED 3 */
+
+        const btnLed3On =
+            document.getElementById(
+                "btnLed3On"
+            );
+
+
+        const btnLed3Off =
+            document.getElementById(
+                "btnLed3Off"
+            );
+
+
+        /* Controle geral */
+
+        const btnAllOn =
+            document.getElementById(
+                "btnAllOn"
+            );
+
+
+        const btnAllOff =
+            document.getElementById(
+                "btnAllOff"
+            );
+
+
+        const lastMessage =
+            document.getElementById(
+                "lastMessage"
+            );
+
+
+        /* =================================
+           CLIENTE PAHO MQTT
+        ================================= */
+
+        const client =
+
+            new Paho.MQTT.Client(
+
+                MQTT_HOST,
+
+                MQTT_PORT,
+
+                "/mqtt",
+
+                clientId
+
+            );
+
+
+        /* =================================
+           STATUS
+        ================================= */
+
+        function setStatus(
+            type,
+            text
+        ) {
+
+            status.className =
+                "status";
+
+
+            if (
+                type === "online"
+            ) {
+
+                status.classList.add(
+                    "status-online"
+                );
+
+            }
+
+
+            if (
+                type === "offline"
+            ) {
+
+                status.classList.add(
+                    "status-offline"
+                );
+
+            }
+
+
+            statusText.textContent =
+                text;
+
+        }
+
+
+        /* =================================
+           CONEXÃO PERDIDA
+        ================================= */
+
+        client.onConnectionLost =
+
+            function (
+                responseObject
+            ) {
+
+                setStatus(
+                    "offline",
+                    "Sistema Offline"
+                );
+
+
+                updateButtons();
+
+
+                if (
+                    responseObject.errorCode !== 0
+                ) {
+
+                    console.log(
+                        "Conexão perdida:",
+                        responseObject.errorMessage
+                    );
+
+                }
+
+            };
+
+
+        /* =================================
+           MENSAGEM RECEBIDA
+           
+           REGRA DE OURO:
+           OS LEDs SÓ MUDAM AQUI.
+        ================================= */
+
+        client.onMessageArrived =
+
+            function (
+                message
+            ) {
+
+
+                const received =
+
+                    message
+                        .payloadString
+                        .trim();
+
+
+                console.log(
+                    "Mensagem recebida:",
+                    received
+                );
+
+
+                lastMessage.textContent =
+                    received;
+
+
+                /* =========================
+                   LED 1
+                ========================= */
+
+                if (
+                    received === "A"
+                ) {
+
+                    led1.classList.add(
+                        "active"
+                    );
+
+                    ledText1.textContent =
+                        "Dispositivo Ativo";
+
+                }
+
+
+                else if (
+                    received === "a"
+                ) {
+
+                    led1.classList.remove(
+                        "active"
+                    );
+
+                    ledText1.textContent =
+                        "Dispositivo Inativo";
+
+                }
+
+
+                /* =========================
+                   LED 2
+                ========================= */
+
+                else if (
+                    received === "B"
+                ) {
+
+                    led2.classList.add(
+                        "active"
+                    );
+
+                    ledText2.textContent =
+                        "Dispositivo Ativo";
+
+                }
+
+
+                else if (
+                    received === "b"
+                ) {
+
+                    led2.classList.remove(
+                        "active"
+                    );
+
+                    ledText2.textContent =
+                        "Dispositivo Inativo";
+
+                }
+
+
+                /* =========================
+                   LED 3
+                ========================= */
+
+                else if (
+                    received === "C"
+                ) {
+
+                    led3.classList.add(
+                        "active"
+                    );
+
+                    ledText3.textContent =
+                        "Dispositivo Ativo";
+
+                }
+
+
+                else if (
+                    received === "c"
+                ) {
+
+                    led3.classList.remove(
+                        "active"
+                    );
+
+                    ledText3.textContent =
+                        "Dispositivo Inativo";
+
+                }
+
+
+                /* =========================
+                   TODOS LIGADOS
+                ========================= */
+
+                else if (
+                    received === "X"
+                ) {
+
+                    led1.classList.add(
+                        "active"
+                    );
+
+                    led2.classList.add(
+                        "active"
+                    );
+
+                    led3.classList.add(
+                        "active"
+                    );
+
+
+                    ledText1.textContent =
+                        "Dispositivo Ativo";
+
+                    ledText2.textContent =
+                        "Dispositivo Ativo";
+
+                    ledText3.textContent =
+                        "Dispositivo Ativo";
+
+                }
+
+
+                /* =========================
+                   TODOS DESLIGADOS
+                ========================= */
+
+                else if (
+                    received === "x"
+                ) {
+
+                    led1.classList.remove(
+                        "active"
+                    );
+
+                    led2.classList.remove(
+                        "active"
+                    );
+
+                    led3.classList.remove(
+                        "active"
+                    );
+
+
+                    ledText1.textContent =
+                        "Dispositivo Inativo";
+
+                    ledText2.textContent =
+                        "Dispositivo Inativo";
+
+                    ledText3.textContent =
+                        "Dispositivo Inativo";
+
+                }
+
+            };
+
+
+        /* =================================
+           CONECTAR AO HIVEMQ
+        ================================= */
+
+        function connectMQTT() {
+
+            setStatus(
+                "sync",
+                "Sincronizando..."
+            );
+
+
+            client.connect({
+
+                useSSL: true,
+
+                timeout: 10,
+
+
+                onSuccess:
+
+                    function () {
+
+                        console.log(
+                            "Conectado ao HiveMQ"
+                        );
+
+
+                        setStatus(
+                            "online",
+                            "Sistema Online"
+                        );
+
+
+                        updateButtons();
+
+
+                        if (
+                            currentTopic !== ""
+                        ) {
+
+                            subscribeTopic();
+
+                        }
+
+                    },
+
+
+                onFailure:
+
+                    function (
+                        error
+                    ) {
+
+                        console.error(
+                            "Erro MQTT:",
+                            error
+                        );
+
+
+                        setStatus(
+                            "offline",
+                            "Falha na conexão"
+                        );
+
+
+                        updateButtons();
+
+                    }
+
+            });
+
+        }
+
+
+        /* =================================
+           ATUALIZAR BOTÕES
+        ================================= */
+
+        function updateButtons() {
+
+            const connected =
+                client.isConnected();
+
+
+            const hasTopic =
+                currentTopic.trim() !== "";
+
+
+            const enabled =
+                connected &&
+                hasTopic;
+
+
+            btnLed1On.disabled =
+                !enabled;
+
+            btnLed1Off.disabled =
+                !enabled;
+
+
+            btnLed2On.disabled =
+                !enabled;
+
+            btnLed2Off.disabled =
+                !enabled;
+
+
+            btnLed3On.disabled =
+                !enabled;
+
+            btnLed3Off.disabled =
+                !enabled;
+
+
+            btnAllOn.disabled =
+                !enabled;
+
+            btnAllOff.disabled =
+                !enabled;
+
+        }
+
+
+        /* =================================
+           ASSINAR TÓPICO
+        ================================= */
+
+        function subscribeTopic() {
+
+            if (
+                !client.isConnected()
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                currentTopic.trim() === ""
+            ) {
+
+                return;
+
+            }
+
+
+            client.subscribe(
+
+                currentTopic,
+
+                {
+
+                    qos: 0,
+
+
+                    onSuccess:
+
+                        function () {
+
+                            console.log(
+                                "Inscrito no tópico:",
+                                currentTopic
+                            );
+
+                            updateButtons();
+
+                        },
+
+
+                    onFailure:
+
+                        function (
+                            error
+                        ) {
+
+                            console.error(
+                                "Erro ao assinar:",
+                                error
+                            );
+
+                        }
+
+                }
+
+            );
+
+        }
+
+
+        /* =================================
+           PUBLICAR COMANDO
+        ================================= */
+
+        function publishCommand(
+            command
+        ) {
+
+            if (
+                !client.isConnected()
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                currentTopic.trim() === ""
+            ) {
+
+                alert(
+                    "Digite o tópico MQTT primeiro."
+                );
+
+                topicInput.focus();
+
+                return;
+
+            }
+
+
+            const message =
+
+                new Paho.MQTT.Message(
+                    command
+                );
+
+
+            message.destinationName =
+                currentTopic;
+
+
+            message.qos = 0;
+
+
+            message.retained = false;
+
+
+            client.send(
+                message
+            );
+
+
+            console.log(
+                "Comando enviado:",
+                command
+            );
+
+
+            /*
+             * IMPORTANTE:
+             *
+             * Nenhum LED é alterado
+             * nesta função.
+             *
+             * O LED só será alterado
+             * dentro de onMessageArrived.
+             */
+
+        }
+
+
+        /* =================================
+           LED 1
+        ================================= */
+
+        btnLed1On.addEventListener(
+            "click",
+            function () {
+
+                publishCommand("A");
+
+            }
+        );
+
+
+        btnLed1Off.addEventListener(
+            "click",
+            function () {
+
+                publishCommand("a");
+
+            }
+        );
+
+
+        /* =================================
+           LED 2
+        ================================= */
+
+        btnLed2On.addEventListener(
+            "click",
+            function () {
+
+                publishCommand("B");
+
+            }
+        );
+
+
+        btnLed2Off.addEventListener(
+            "click",
+            function () {
+
+                publishCommand("b");
+
+            }
+        );
+
+
+        /* =================================
+           LED 3
+        ================================= */
+
+        btnLed3On.addEventListener(
+            "click",
+            function () {
+
+                publishCommand("C");
+
+            }
+        );
+
+
+        btnLed3Off.addEventListener(
+            "click",
+            function () {
+
+                publishCommand("c");
+
+            }
+        );
+
+
+        /* =================================
+           TODOS OS LEDs
+        ================================= */
+
+        btnAllOn.addEventListener(
+            "click",
+            function () {
+
+                publishCommand("X");
+
+            }
+        );
+
+
+        btnAllOff.addEventListener(
+            "click",
+            function () {
+
+                publishCommand("x");
+
+            }
+        );
+
+
+        /* =================================
+           ALTERAR TÓPICO
+        ================================= */
+
+        topicInput.addEventListener(
+            "change",
+            function () {
+
+                const newTopic =
+
+                    topicInput
+                        .value
+                        .trim();
+
+
+                if (
+                    newTopic === ""
+                ) {
+
+                    currentTopic = "";
+
+                    updateButtons();
+
+                    return;
+
+                }
+
+
+                if (
+                    !client.isConnected()
+                ) {
+
+                    currentTopic =
+                        newTopic;
+
+                    updateButtons();
+
+                    return;
+
+                }
+
+
+                const oldTopic =
+                    currentTopic;
+
+
+                currentTopic =
+                    newTopic;
+
+
+                if (
+                    oldTopic !== ""
+                ) {
+
+                    client.unsubscribe(
+
+                        oldTopic,
+
+                        {
+
+                            onSuccess:
+
+                                function () {
+
+                                    subscribeTopic();
+
+                                },
+
+
+                            onFailure:
+
+                                function (
+                                    error
+                                ) {
+
+                                    console.error(
+                                        error
+                                    );
+
+                                    subscribeTopic();
+
+                                }
+
+                        }
+
+                    );
+
+                }
+
+                else {
+
+                    subscribeTopic();
+
+                }
+
+
+                updateButtons();
+
+            }
+        );
+
+
+        /* =================================
+           ATUALIZAR ENQUANTO DIGITA
+        ================================= */
+
+        topicInput.addEventListener(
+            "input",
+            function () {
+
+                currentTopic =
+                    topicInput
+                        .value
+                        .trim();
+
+
+                updateButtons();
+
+            }
+        );
+
+
+        /* =================================
+           INICIAR
+        ================================= */
+
+        connectMQTT();
+
+    </script>
+
+</body>
+
+</html>
